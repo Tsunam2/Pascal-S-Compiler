@@ -365,18 +365,26 @@ static void check_call_arguments(ASTNode *call, Symbol *sym)
     {
         check_node(actual);
 
-        if (actual->exp_type != formal->type)
+        /* 【防崩溃】如果因为语法错误导致实参为空，直接跳过当前参数检查 */
+        if (actual->exp_type != T_VOID)
         {
-            fprintf(stderr, "[Semantic Error] Line %d: Argument %d of '%s' has incompatible type\n", call->line_num, index, call->attr.name);
-            semantic_errors++;
-        }
+            /* 【修复】如果形参是传值调用，允许实参把 INTEGER 隐式提升为 REAL */
+            int is_compatible = (actual->exp_type == formal->type) ||
+                                (formal->mode == PASS_VALUE && formal->type == T_REAL && actual->exp_type == T_INTEGER);
 
-        if (formal->mode == PASS_VAR)
-        {
-            if (actual->node_type != AST_VAR_ACCESS || actual->symbol_kind == K_CONSTANT)
+            if (!is_compatible)
             {
-                fprintf(stderr, "[Semantic Error] Line %d: Argument %d of '%s' must be a variable for var parameter\n", call->line_num, index, call->attr.name);
+                fprintf(stderr, "[Semantic Error] Line %d: Argument %d of '%s' has incompatible type\n", call->line_num, index, call->attr.name);
                 semantic_errors++;
+            }
+
+            if (formal->mode == PASS_VAR)
+            {
+                if (actual->node_type != AST_VAR_ACCESS || actual->symbol_kind == K_CONSTANT)
+                {
+                    fprintf(stderr, "[Semantic Error] Line %d: Argument %d of '%s' must be a variable for var parameter\n", call->line_num, index, call->attr.name);
+                    semantic_errors++;
+                }
             }
         }
 
@@ -501,6 +509,10 @@ static void check_node(ASTNode *node)
         check_node(left);
         check_node(right);
 
+        /* 【致命漏洞修复 1】防崩溃：如果左右节点因为语法错误丢失，立刻阻断，防止段错误！ */
+        if (left == NULL || right == NULL)
+            break;
+
         if (left->symbol_kind == K_CONSTANT)
         {
             fprintf(stderr, "[Semantic Error] Line %d: Cannot assign to constant '%s'\n", node->line_num, left->attr.name);
@@ -520,18 +532,16 @@ static void check_node(ASTNode *node)
                 semantic_errors++;
                 break;
             }
-            if (left->exp_type == T_INTEGER && right->exp_type == T_REAL)
-            {
-                fprintf(stderr, "[Semantic Error] Line %d: Type mismatch. Cannot assign REAL to function '%s'\n", node->line_num, left->attr.name);
-                semantic_errors++;
-            }
-            break;
         }
 
-        if (left->exp_type == T_INTEGER && right->exp_type == T_REAL)
+        /* 【致命漏洞修复 2】严密的类型检查：要么完全相等，要么允许整数向浮点数转换 */
+        if (left->exp_type != right->exp_type)
         {
-            fprintf(stderr, "[Semantic Error] Line %d: Type mismatch. Cannot assign REAL to INTEGER identifier '%s'\n", node->line_num, left->attr.name);
-            semantic_errors++;
+            if (!(left->exp_type == T_REAL && right->exp_type == T_INTEGER))
+            {
+                fprintf(stderr, "[Semantic Error] Line %d: Type mismatch in assignment to '%s'\n", node->line_num, left->attr.name);
+                semantic_errors++;
+            }
         }
         break;
     }
@@ -623,27 +633,79 @@ static void check_node(ASTNode *node)
         break;
 
     case AST_BINOP:
-        check_node(node->child[0]);
-        check_node(node->child[1]);
-        if (node->attr.op == '=' || node->attr.op == '<' || node->attr.op == '>' ||
-            (node->attr.op >= 260 && node->attr.op <= 263) || node->attr.op == 266)
+    {
+        ASTNode *left = node->child[0];
+        ASTNode *right = node->child[1];
+
+        check_node(left);
+        check_node(right);
+
+        /* 【防崩溃】 */
+        if (left == NULL || right == NULL)
         {
+            node->exp_type = T_INTEGER; // 容错回退
+            break;
+        }
+
+        DataType lt = left->exp_type;
+        DataType rt = right->exp_type;
+        int op = node->attr.op;
+
+        /* div 和 mod：必须严格是整数 */
+        if (op == 264 || op == 265)
+        {
+            if (lt != T_INTEGER || rt != T_INTEGER)
+            {
+                fprintf(stderr, "[Semantic Error] Line %d: 'div' and 'mod' require INTEGER operands\n", node->line_num);
+                semantic_errors++;
+            }
+            node->exp_type = T_INTEGER;
+        }
+        /* and 和 or：必须严格是布尔值 */
+        else if (op == 266 || op == 263)
+        {
+            if (lt != T_BOOLEAN || rt != T_BOOLEAN)
+            {
+                fprintf(stderr, "[Semantic Error] Line %d: 'and' and 'or' require BOOLEAN operands\n", node->line_num);
+                semantic_errors++;
+            }
             node->exp_type = T_BOOLEAN;
         }
-        else if (node->attr.op == 264 || node->attr.op == 265)
+        /* 加减乘：必须是数值类型 */
+        else if (op == '+' || op == '-' || op == '*')
         {
-            node->exp_type = T_INTEGER;
+            if (!is_numeric_type(lt) || !is_numeric_type(rt))
+            {
+                fprintf(stderr, "[Semantic Error] Line %d: Arithmetic operators require numeric operands\n", node->line_num);
+                semantic_errors++;
+            }
+            if (lt == T_REAL || rt == T_REAL)
+                node->exp_type = T_REAL;
+            else
+                node->exp_type = T_INTEGER;
         }
-        else if ((node->child[0] != NULL && node->child[0]->exp_type == T_REAL) ||
-                 (node->child[1] != NULL && node->child[1]->exp_type == T_REAL))
+        /* 浮点除法 '/'：不管两边是整数还是浮点，结果永远是浮点 */
+        else if (op == '/')
         {
+            if (!is_numeric_type(lt) || !is_numeric_type(rt))
+            {
+                fprintf(stderr, "[Semantic Error] Line %d: '/' requires numeric operands\n", node->line_num);
+                semantic_errors++;
+            }
             node->exp_type = T_REAL;
         }
+        /* 关系运算符 (=, <>, <, >, <=, >=)：两边类型必须匹配，或者都是数值类型 */
         else
         {
-            node->exp_type = T_INTEGER;
+            if (lt != rt && !(is_numeric_type(lt) && is_numeric_type(rt)))
+            {
+                fprintf(stderr, "[Semantic Error] Line %d: Relational operators require compatible types\n", node->line_num);
+                semantic_errors++;
+            }
+            node->exp_type = T_BOOLEAN;
         }
         break;
+    }
 
     case AST_UNARYOP:
         check_node(node->child[0]);

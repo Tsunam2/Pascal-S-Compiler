@@ -225,6 +225,11 @@ const_decl:
 
         $$ = decl;
     }
+    | error ';'   /* <--- 新增的错误恢复分支 */
+    {
+        yyerrok;  /* 告诉Bison：我已经遇到分号同步了，解除错误报警状态 */
+        $$ = NULL; /* 舍弃这个错误的AST节点 */
+    }
     ;
 
 const_value:
@@ -347,6 +352,11 @@ var_decl:
 
         free($5);
         $$ = head;
+    }
+    | error ';'   /* <--- 新增的错误恢复分支 */
+    {
+        yyerrok;
+        $$ = NULL;
     }
     ;
 
@@ -639,6 +649,12 @@ statement:
         $$ = new_ast_node(AST_WRITE, line_num);
         $$->child[0] = $3;
     }
+    | error       /* <--- 新增的错误恢复分支 */
+    {
+        /* 这里不需要写 yyerrok，外层的 statement_list 会自动用 ';' 进行同步 */
+        $$ = NULL; 
+    }
+    ;
     ;
 
 expression:
