@@ -145,6 +145,11 @@ program_head:
     {
         $$ = new_id_node($2, line_num);
     }
+    | TOK_PROGRAM TOK_ID '(' id_list ')'
+    {
+        $$ = new_id_node($2, line_num);
+        $$->child[0] = $4; 
+    }
     ;
 
 program_body:
