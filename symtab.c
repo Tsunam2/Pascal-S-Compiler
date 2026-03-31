@@ -66,6 +66,7 @@ Symbol *insert(char *name, SymbolKind kind, DataType type)
 
     sym_table[sym_top].kind = kind;
     sym_table[sym_top].type = type;
+    sym_table[sym_top].pass_mode = PASS_VALUE;
     sym_table[sym_top].level = current_level;
 
     /* 清空附加属性区，防止脏数据 */

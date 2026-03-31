@@ -1,0 +1,7 @@
+*.exe
+compiler.exe
+pascc
+pascc.exe
+build/
+target_program
+*.o

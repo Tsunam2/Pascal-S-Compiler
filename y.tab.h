@@ -44,6 +44,12 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 93 "parser.y"
+
+struct BoundSpec;
+
+#line 53 "y.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -64,24 +70,30 @@ extern int yydebug;
     TOK_IF = 265,                  /* TOK_IF  */
     TOK_THEN = 266,                /* TOK_THEN  */
     TOK_ELSE = 267,                /* TOK_ELSE  */
-    TOK_FOR = 268,                 /* TOK_FOR  */
-    TOK_TO = 269,                  /* TOK_TO  */
-    TOK_DO = 270,                  /* TOK_DO  */
-    TOK_READ = 271,                /* TOK_READ  */
-    TOK_WRITE = 272,               /* TOK_WRITE  */
-    TOK_ARRAY = 273,               /* TOK_ARRAY  */
-    TOK_OF = 274,                  /* TOK_OF  */
-    TOK_INTEGER = 275,             /* TOK_INTEGER  */
-    TOK_REAL = 276,                /* TOK_REAL  */
-    TOK_BOOLEAN = 277,             /* TOK_BOOLEAN  */
-    TOK_CHAR = 278,                /* TOK_CHAR  */
-    TOK_ASSIGNOP = 279,            /* TOK_ASSIGNOP  */
-    TOK_RELOP = 280,               /* TOK_RELOP  */
-    TOK_ADDOP = 281,               /* TOK_ADDOP  */
-    TOK_MULOP = 282,               /* TOK_MULOP  */
-    TOK_ID = 283,                  /* TOK_ID  */
-    TOK_NUM = 284,                 /* TOK_NUM  */
-    LOWER_THAN_ELSE = 285          /* LOWER_THAN_ELSE  */
+    TOK_WHILE = 268,               /* TOK_WHILE  */
+    TOK_FOR = 269,                 /* TOK_FOR  */
+    TOK_TO = 270,                  /* TOK_TO  */
+    TOK_DO = 271,                  /* TOK_DO  */
+    TOK_READ = 272,                /* TOK_READ  */
+    TOK_WRITE = 273,               /* TOK_WRITE  */
+    TOK_ARRAY = 274,               /* TOK_ARRAY  */
+    TOK_OF = 275,                  /* TOK_OF  */
+    TOK_INTEGER = 276,             /* TOK_INTEGER  */
+    TOK_REAL = 277,                /* TOK_REAL  */
+    TOK_BOOLEAN = 278,             /* TOK_BOOLEAN  */
+    TOK_CHAR = 279,                /* TOK_CHAR  */
+    TOK_NOT = 280,                 /* TOK_NOT  */
+    TOK_TRUE = 281,                /* TOK_TRUE  */
+    TOK_FALSE = 282,               /* TOK_FALSE  */
+    TOK_ASSIGNOP = 283,            /* TOK_ASSIGNOP  */
+    TOK_DOTDOT = 284,              /* TOK_DOTDOT  */
+    TOK_CHARVAL = 285,             /* TOK_CHARVAL  */
+    TOK_RELOP = 286,               /* TOK_RELOP  */
+    TOK_ADDOP = 287,               /* TOK_ADDOP  */
+    TOK_MULOP = 288,               /* TOK_MULOP  */
+    TOK_ID = 289,                  /* TOK_ID  */
+    TOK_NUM = 290,                 /* TOK_NUM  */
+    LOWER_THAN_ELSE = 291          /* LOWER_THAN_ELSE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -100,37 +112,44 @@ extern int yydebug;
 #define TOK_IF 265
 #define TOK_THEN 266
 #define TOK_ELSE 267
-#define TOK_FOR 268
-#define TOK_TO 269
-#define TOK_DO 270
-#define TOK_READ 271
-#define TOK_WRITE 272
-#define TOK_ARRAY 273
-#define TOK_OF 274
-#define TOK_INTEGER 275
-#define TOK_REAL 276
-#define TOK_BOOLEAN 277
-#define TOK_CHAR 278
-#define TOK_ASSIGNOP 279
-#define TOK_RELOP 280
-#define TOK_ADDOP 281
-#define TOK_MULOP 282
-#define TOK_ID 283
-#define TOK_NUM 284
-#define LOWER_THAN_ELSE 285
+#define TOK_WHILE 268
+#define TOK_FOR 269
+#define TOK_TO 270
+#define TOK_DO 271
+#define TOK_READ 272
+#define TOK_WRITE 273
+#define TOK_ARRAY 274
+#define TOK_OF 275
+#define TOK_INTEGER 276
+#define TOK_REAL 277
+#define TOK_BOOLEAN 278
+#define TOK_CHAR 279
+#define TOK_NOT 280
+#define TOK_TRUE 281
+#define TOK_FALSE 282
+#define TOK_ASSIGNOP 283
+#define TOK_DOTDOT 284
+#define TOK_CHARVAL 285
+#define TOK_RELOP 286
+#define TOK_ADDOP 287
+#define TOK_MULOP 288
+#define TOK_ID 289
+#define TOK_NUM 290
+#define LOWER_THAN_ELSE 291
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 25 "parser.y"
+#line 97 "parser.y"
 
     int int_val;
     float real_val;
     char string_val[MAX_ID_LEN + 1];
-    struct ASTNode* node; /* 用于传递构造好的 AST 树节点 */
+    struct ASTNode *node;
+    struct BoundSpec *bounds;
 
-#line 134 "y.tab.h"
+#line 153 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

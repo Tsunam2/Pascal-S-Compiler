@@ -1,0 +1,11 @@
+program loopdemo;
+var
+    i, sum : integer;
+begin
+    sum := 0;
+    for i := 1 to 5 do
+    begin
+        sum := sum + i
+    end;
+    write(sum)
+end.

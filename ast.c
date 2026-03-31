@@ -18,6 +18,10 @@ ASTNode *new_ast_node(ASTNodeType type, int line)
 
     node->node_type = type;
     node->line_num = line;
+    node->symbol_kind = K_VARIABLE;
+    node->pass_mode = PASS_VALUE;
+    node->arg_mode = PASS_VALUE;
+    node->is_statement_call = 0;
 
     /* 默认初始化 */
     node->exp_type = T_INTEGER; /* 默认给个类型，后续语义分析会覆盖 */
@@ -52,6 +56,22 @@ ASTNode *new_real_node(float val, int line)
     ASTNode *node = new_ast_node(AST_CONST_VAL, line);
     node->attr.real_val = val;
     node->exp_type = T_REAL;
+    return node;
+}
+
+ASTNode *new_char_node(char val, int line)
+{
+    ASTNode *node = new_ast_node(AST_CONST_VAL, line);
+    node->attr.char_val = val;
+    node->exp_type = T_CHAR;
+    return node;
+}
+
+ASTNode *new_bool_node(bool val, int line)
+{
+    ASTNode *node = new_ast_node(AST_CONST_VAL, line);
+    node->attr.bool_val = val;
+    node->exp_type = T_BOOLEAN;
     return node;
 }
 
@@ -115,6 +135,8 @@ const char *get_node_type_name(ASTNodeType type)
         return "Compound (begin..end)";
     case AST_IF:
         return "IfStmt";
+    case AST_WHILE:
+        return "WhileStmt";
     case AST_FOR:
         return "ForStmt";
     case AST_ASSIGN:
@@ -153,7 +175,8 @@ void print_ast(ASTNode *root, int depth)
     printf("- [%s] (Line %d)", get_node_type_name(root->node_type), root->line_num);
 
     /* 针对叶子节点和特殊节点补充打印具体值 */
-    if (root->node_type == AST_VAR_ACCESS || root->node_type == AST_VAR_DECL)
+    if (root->node_type == AST_VAR_ACCESS || root->node_type == AST_VAR_DECL ||
+        root->node_type == AST_ROUTINE || root->node_type == AST_CALL)
     {
         printf(" Name: %s", root->attr.name);
     }
@@ -163,6 +186,10 @@ void print_ast(ASTNode *root, int depth)
             printf(" Value: %d", root->attr.int_val);
         else if (root->exp_type == T_REAL)
             printf(" Value: %f", root->attr.real_val);
+        else if (root->exp_type == T_CHAR)
+            printf(" Value: '%c'", root->attr.char_val);
+        else if (root->exp_type == T_BOOLEAN)
+            printf(" Value: %s", root->attr.bool_val ? "true" : "false");
     }
     else if (root->node_type == AST_BINOP)
     {
