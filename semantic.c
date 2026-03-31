@@ -471,6 +471,12 @@ static void check_node(ASTNode *node)
         {
             fprintf(stderr, "[Semantic Error] Line %d: Undeclared identifier '%s'\n", node->line_num, node->attr.name);
             semantic_errors++;
+
+            /* 【级联报错修复：终极语义恢复】
+               把这个未声明的变量伪装成合法的 INTEGER 变量，强行塞进符号表！
+               这样以后再遇到它，就不会触发重复报错了。 */
+            insert(node->attr.name, K_VARIABLE, T_INTEGER);
+
             node->symbol_kind = K_VARIABLE;
             node->exp_type = T_INTEGER;
         }
@@ -556,6 +562,11 @@ static void check_node(ASTNode *node)
             {
                 fprintf(stderr, "[Semantic Error] Line %d: Undeclared subprogram '%s'\n", node->line_num, node->attr.name);
                 semantic_errors++;
+
+                /* 【级联报错修复：终极语义恢复】
+                   把这个未声明的函数伪装成合法的、无返回值的 PROCEDURE，强行塞进符号表！ */
+                insert(node->attr.name, K_PROCEDURE, T_VOID);
+
                 node->symbol_kind = K_PROCEDURE;
                 node->exp_type = T_VOID;
             }
